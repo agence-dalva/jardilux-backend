@@ -21,15 +21,23 @@ module.exports = defineConfig({
       key: PRODUCT_DETAILS_MODULE,
     },
     ...(process.env.R2_ENDPOINT ? [{
-      resolve: "@medusajs/file-s3",
+      resolve: "@medusajs/medusa/file",
       key: Modules.FILE,
       options: {
-        file_url: process.env.R2_PUBLIC_URL,
-        access_key_id: process.env.R2_ACCESS_KEY_ID,
-        secret_access_key: process.env.R2_SECRET_ACCESS_KEY,
-        region: "auto",
-        bucket: process.env.R2_BUCKET,
-        endpoint: process.env.R2_ENDPOINT,
+        providers: [
+          {
+            resolve: "@medusajs/file-s3",
+            id: "s3",
+            options: {
+              file_url: process.env.R2_PUBLIC_URL,
+              access_key_id: process.env.R2_ACCESS_KEY_ID,
+              secret_access_key: process.env.R2_SECRET_ACCESS_KEY,
+              region: "auto",
+              bucket: process.env.R2_BUCKET,
+              endpoint: process.env.R2_ENDPOINT,
+            },
+          },
+        ],
       },
     }] : []),
   ],
