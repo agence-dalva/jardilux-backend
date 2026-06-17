@@ -1,18 +1,18 @@
-FROM node:20-alpine
+FROM node:20-slim
 WORKDIR /app
 
-# Layer cachée — ne réinstalle que si les package*.json changent
-COPY package.json package-lock.json ./
-COPY apps/backend/package.json ./apps/backend/
+# Install ALL deps (devDeps required for Vite/admin build)
+COPY apps/backend/package.json ./package.json
+RUN npm install --include=dev
 
-RUN npm ci
+# Source
+COPY apps/backend/ .
 
-# Source du backend
-COPY apps/backend/ ./apps/backend/
-
-WORKDIR /app/apps/backend
+# Build server + admin dashboard
 RUN npm run build
 
-EXPOSE 9000
+# Fail early if admin wasn't built — avoids silent build failures
+RUN ls .medusa/server/public/index.html
 
+EXPOSE 9000
 CMD ["npm", "run", "start"]
