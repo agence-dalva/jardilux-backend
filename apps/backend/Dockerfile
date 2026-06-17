@@ -1,11 +1,16 @@
 FROM node:20-alpine
 WORKDIR /app
 
-# Layer cachée — npm ci ne tourne que si package*.json change
+# Layer cachée — ne réinstalle que si les package*.json changent
 COPY package.json package-lock.json ./
+COPY apps/backend/package.json ./apps/backend/
+
 RUN npm ci
 
-COPY . .
+# Source du backend
+COPY apps/backend/ ./apps/backend/
+
+WORKDIR /app/apps/backend
 RUN npm run build
 
 EXPOSE 9000
