@@ -19,4 +19,4 @@ EXPOSE 9000
 
 # Démarrer depuis .medusa/server comme préconisé par Medusa v2
 # predeploy = medusa db:migrate
-CMD ["sh", "-c", "cd /app/.medusa/server && npm run predeploy && npm run start"]
+CMD ["sh", "-c", "node_modules/.bin/medusa db:migrate && cd /app/.medusa/server && npm run start"]
