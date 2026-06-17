@@ -156,3 +156,121 @@ The storefront is configured via environment variables in `apps/storefront/.env.
 
 - [Medusa Documentation](https://docs.medusajs.com)
 - [Medusa Cloud](https://cloud.medusajs.com)
+
+---
+
+## Déploiement Railway (one-shot)
+
+Guide basé sur les erreurs réelles rencontrées. À suivre dans l'ordre.
+
+### Stack
+
+- **Backend** : Medusa v2
+- **DB** : Neon (PostgreSQL serverless)
+- **Cache/Events** : Redis plugin Railway
+- **Deploy** : Railway (Docker) + Vercel (frontend Next.js)
+
+### Dockerfile (copier tel quel)
+
+À placer dans `apps/backend/Dockerfile`. Le build context Railway est **toujours la racine du repo**.
+
+```dockerfile
+FROM node:20-slim
+WORKDIR /app
+
+# Install ALL deps (devDeps required for Vite/admin build)
+COPY apps/backend/package.json ./package.json
+RUN npm install --include=dev
+
+# Source
+COPY apps/backend/ .
+
+# NODE_ENV=development requis — avec production, medusa build skip le dashboard admin
+RUN NODE_ENV=development npm run build
+
+# Install runtime deps dans le dossier compilé (requis Medusa v2)
+RUN cd .medusa/server && npm install
+
+EXPOSE 9000
+
+# Démarrer depuis .medusa/server (Medusa v2 cherche l'admin à ./public/ depuis là)
+CMD ["sh", "-c", "node_modules/.bin/medusa db:migrate && cd /app/.medusa/server && npm run start"]
+```
+
+### .dockerignore (à la racine du repo)
+
+```
+node_modules
+apps/backend/node_modules
+apps/backend/.medusa
+**/.env*
+**/*.log
+.git
+```
+
+### Railway — setup
+
+**Config Docker dans Railway** — Settings du service :
+- **Builder** : `Dockerfile`
+- **Dockerfile Path** : `apps/backend/Dockerfile` (sans slash initial)
+- **Root Directory** : laisser vide
+
+**Ajouter Redis** : New Service → Database → Redis, puis dans les variables du backend :
+```
+REDIS_URL=${{Redis.REDIS_URL}}
+```
+⚠️ Sans guillemets autour de `${{Redis.REDIS_URL}}`
+
+**Variables d'environnement Railway :**
+```env
+DATABASE_URL=postgresql://...neon.tech/...?sslmode=require
+REDIS_URL=${{Redis.REDIS_URL}}
+NODE_ENV=production
+JWT_SECRET=<openssl rand -hex 32>
+COOKIE_SECRET=<openssl rand -hex 32>
+STORE_CORS=https://ton-frontend.vercel.app
+ADMIN_CORS=https://ton-backend.up.railway.app
+AUTH_CORS=https://ton-backend.up.railway.app
+PORT=9000
+```
+
+### Créer le premier admin
+
+La DB prod est vide — le compte local n'existe pas en prod. Via Railway Shell :
+
+```bash
+cd /app && node_modules/.bin/medusa user --email ton@email.com --password motdepasse
+```
+
+Ensuite se connecter sur `https://ton-backend.up.railway.app/app`.
+
+### Publishable API Key
+
+Admin Medusa : **Settings → API Keys → Create**. Copier pour le frontend.
+
+### Vercel — frontend
+
+```env
+NEXT_PUBLIC_MEDUSA_BACKEND_URL=https://ton-backend.up.railway.app
+NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY=pk_...
+```
+
+### Timings de build
+
+| Situation | Durée |
+|-----------|-------|
+| Premier build (cache vide) | ~25-30 min |
+| Push de code (package.json inchangé) | ~15 min |
+| Push qui change package.json | ~20 min |
+
+`npm install` est en cache si `package.json` ne change pas. `medusa build` repart toujours.
+
+### Pièges connus
+
+| Erreur | Cause | Fix |
+|--------|-------|-----|
+| `Could not find index.html in admin build directory` | `NODE_ENV=production` pendant build → Vite skip l'admin | `RUN NODE_ENV=development npm run build` |
+| `Missing script: predeploy` | `.medusa/server/package.json` n'a pas ce script | Utiliser `npm run start` directement |
+| `redisUrl not found` | Variable Railway avec guillemets | `REDIS_URL=${{Redis.REDIS_URL}}` sans guillemets |
+| `Entity does not have property 'productDetails'` | Medusa utilise snake_case depuis `model.define` | Utiliser `product_details` dans les queries |
+| `package-lock.json not found` | `npm ci` sur un monorepo sans lock file | Utiliser `npm install` sur le `package.json` du backend uniquement |
