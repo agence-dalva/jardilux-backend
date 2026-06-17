@@ -1,4 +1,4 @@
-import { loadEnv, defineConfig } from '@medusajs/framework/utils'
+import { loadEnv, defineConfig, Modules } from '@medusajs/framework/utils'
 import { PRODUCT_DETAILS_MODULE } from './src/modules/product-details'
 
 loadEnv(process.env.NODE_ENV || 'development', process.cwd())
@@ -22,6 +22,7 @@ module.exports = defineConfig({
     },
     ...(process.env.R2_ENDPOINT ? [{
       resolve: "@medusajs/file-s3",
+      key: Modules.FILE,
       options: {
         file_url: process.env.R2_PUBLIC_URL,
         access_key_id: process.env.R2_ACCESS_KEY_ID,
