@@ -8,11 +8,15 @@ RUN npm install --include=dev
 # Source
 COPY apps/backend/ .
 
-# Build server + admin dashboard
-RUN npm run build
+# NODE_ENV=development requis pour que medusa build compile le dashboard admin
+# (avec NODE_ENV=production, medusa build skip la compilation Vite de l'admin)
+RUN NODE_ENV=development npm run build
 
-# Fail early if admin wasn't built — avoids silent build failures
-RUN ls .medusa/server/public/index.html
+# Install runtime deps in the compiled output (Medusa v2 requirement)
+RUN cd .medusa/server && npm install
 
 EXPOSE 9000
-CMD ["npm", "run", "start"]
+
+# Démarrer depuis .medusa/server comme préconisé par Medusa v2
+# predeploy = medusa db:migrate
+CMD ["sh", "-c", "cd /app/.medusa/server && npm run predeploy && npm run start"]
