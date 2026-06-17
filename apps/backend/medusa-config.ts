@@ -20,7 +20,7 @@ module.exports = defineConfig({
       resolve: "./src/modules/product-details",
       key: PRODUCT_DETAILS_MODULE,
     },
-    {
+    ...(process.env.R2_ENDPOINT ? [{
       resolve: "@medusajs/file-s3",
       options: {
         file_url: process.env.R2_PUBLIC_URL,
@@ -30,6 +30,6 @@ module.exports = defineConfig({
         bucket: process.env.R2_BUCKET,
         endpoint: process.env.R2_ENDPOINT,
       },
-    },
+    }] : []),
   ],
 })
