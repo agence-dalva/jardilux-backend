@@ -4,6 +4,9 @@ import { PRODUCT_DETAILS_MODULE } from './src/modules/product-details'
 loadEnv(process.env.NODE_ENV || 'development', process.cwd())
 
 module.exports = defineConfig({
+  admin: {
+    maxUploadFileSize: 2.5 * 1024 * 1024, // 2.5 Mo
+  },
   projectConfig: {
     databaseUrl: process.env.DATABASE_URL,
     redisUrl: process.env.REDIS_URL,
