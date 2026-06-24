@@ -1,19 +1,17 @@
-FROM node:20-slim AS deps
+FROM node:20-slim
 WORKDIR /app
-COPY apps/backend/package.json ./
-RUN npm install --include=dev
 
-FROM node:20-slim AS builder
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
-COPY apps/backend/ .
-RUN NODE_ENV=development npm run build
+COPY package.json yarn.lock ./
+COPY apps/backend/package.json ./apps/backend/package.json
+RUN yarn install --frozen-lockfile --non-interactive
 
-FROM node:20-slim AS runtime
-WORKDIR /app/.medusa/server
-COPY --from=builder /app/.medusa/server .
-RUN npm install --omit=dev
+COPY apps/backend/ ./apps/backend/
+WORKDIR /app/apps/backend
+RUN NODE_ENV=development yarn build
+
+WORKDIR /app/apps/backend/.medusa/server
+RUN yarn install --non-interactive --production
 
 EXPOSE 9000
 
-CMD ["sh", "-c", "node_modules/.bin/medusa db:migrate && npm run start"]
+CMD ["sh", "-c", "node_modules/.bin/medusa db:migrate && yarn start"]
