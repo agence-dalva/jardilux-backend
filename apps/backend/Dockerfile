@@ -1,7 +1,9 @@
+# syntax=docker/dockerfile:1
 FROM node:20-slim AS deps
 WORKDIR /app
 COPY apps/backend/package.json ./
-RUN npm install --include=dev
+RUN --mount=type=cache,target=/root/.npm \
+    npm install --include=dev
 
 FROM node:20-slim AS builder
 WORKDIR /app
@@ -10,10 +12,10 @@ COPY apps/backend/ .
 RUN NODE_ENV=development npm run build
 
 FROM node:20-slim AS runtime
-WORKDIR /app
-COPY --from=builder /app/.medusa/server ./.medusa/server
 WORKDIR /app/.medusa/server
-RUN npm install --omit=dev
+COPY --from=builder /app/.medusa/server .
+RUN --mount=type=cache,target=/root/.npm \
+    npm install --omit=dev
 
 EXPOSE 9000
 
