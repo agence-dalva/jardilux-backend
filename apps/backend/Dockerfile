@@ -7,7 +7,10 @@ RUN yarn install --frozen-lockfile --non-interactive
 
 COPY apps/backend/ ./apps/backend/
 WORKDIR /app/apps/backend
-RUN NODE_ENV=development yarn build
+# SITE_SUSPENDED=false est forcé ici : si la variable vaut "true" au moment du
+# build, Medusa saute la compilation du dashboard admin et l'image ne le
+# contient plus du tout. Le blocage doit rester une décision d'exécution.
+RUN NODE_ENV=development SITE_SUSPENDED=false yarn build
 
 WORKDIR /app/apps/backend/.medusa/server
 RUN yarn install --non-interactive --production

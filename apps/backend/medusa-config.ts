@@ -6,6 +6,7 @@ loadEnv(process.env.NODE_ENV || 'development', process.cwd())
 module.exports = defineConfig({
   admin: {
     maxUploadFileSize: 2.5 * 1024 * 1024, // 2.5 Mo
+    disable: process.env.SITE_SUSPENDED === "true",
   },
   projectConfig: {
     databaseUrl: process.env.DATABASE_URL,
